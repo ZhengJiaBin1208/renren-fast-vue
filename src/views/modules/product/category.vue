@@ -18,6 +18,7 @@
     },
     methods: {
       getCategory(){
+        
         this.$http({
           url: this.$http.adornUrl('/product/category/listTree'),
           method: 'get'
