@@ -2,7 +2,8 @@
     <div>
         <el-tree :data="data" :props="defaultProps" :expand-on-click-node="false" show-checkbox node-key="catId"
             :default-expanded-keys=expandKeys
-            draggable="true"
+            :draggable="true"
+            :allow-drop = "allowDrop"
             >
             <span class="custom-tree-node" slot-scope="{ node, data }">
                 <span>{{ node.label }}</span>
@@ -170,6 +171,9 @@ export default {
                 // 更新操作
                 this.editDialog();
             }
+        },allowDrop(draggingNode, dropNode, type){
+            // 判断拖拽的节点是否可以在该位置放置
+            return false;
         },
         remove(node, data) {
             this.$confirm(`是否确认删除【${data.name}】分类?`, '提示', {
