@@ -1,7 +1,11 @@
 <template>
     <div>
+        <el-switch v-model="draggable" active-text="开启拖拽" inactive-text="关闭拖拽">
+        </el-switch>
+        <el-button v-if="draggable" @click="updateSort" type="primary">批量更新</el-button>
+        <el-button type="danger" @click="batchDelete">批量删除</el-button>
         <el-tree :data="data" :props="defaultProps" :expand-on-click-node="false" show-checkbox node-key="catId"
-            @node-drop="handleDrop" :default-expanded-keys=expandKeys :draggable="true" :allow-drop="allowDrop">
+            @node-drop="handleDrop" :default-expanded-keys=expandKeys :allow-drop="allowDrop" :draggable="draggable" ref="tree">
             <span class="custom-tree-node" slot-scope="{ node, data }">
                 <span>{{ node.label }}</span>
                 <span>
@@ -45,6 +49,10 @@
 export default {
     data() {
         return {
+            // 拖拽后的父节点数组
+            pCids: [],
+            // 拖拽默认关闭
+            draggable: false,
             // 拖拽节点后，需要更新的节点的机电信息
             updateNodes: [],
             maxLevel: 0,
@@ -162,7 +170,7 @@ export default {
             })
         },
         submitForm() {
-            console.log("dialogType", this.dialogType)
+            // console.log("dialogType", this.dialogType)
             // 判断当前操作是新增还是更新
             if (this.dialogType) {
                 // 添加操作
@@ -177,26 +185,28 @@ export default {
         // type 参数有三种情况：'prev'、'inner' 和 'next'，分别表示放置在目标节点前、插入至目标节点和放置在目标节点后 
         allowDrop(draggingNode, dropNode, type) {
             // 判断拖拽的节点是否可以在该位置放置
-            console.log("--->", draggingNode, dropNode, type)
+            // console.log("--->", draggingNode, dropNode, type)
             // 1.获取当前被拖拽节点的最大level
             this.countNodeLevel(draggingNode);
-            console.log("maxLevel", this.maxLevel)
-            console.log("draggingNode.level", draggingNode.level)
+            // console.log("maxLevel", this.maxLevel)
+            // console.log("draggingNode.level", draggingNode.level)
             let deep = Math.abs(this.maxLevel - draggingNode.level) + 1;
-            console.log("deep", deep)
+            // console.log("deep", deep)
             if (type == 'inner') {
-                console.log("deep + dropNode.level", deep + dropNode.level);
+                // console.log("deep + dropNode.level", deep + dropNode.level);
                 return deep + dropNode.level <= 3;
             }
-            console.log("deep + dropNode.parent.level", deep + dropNode.parent.level);
+            // console.log("deep + dropNode.parent.level", deep + dropNode.parent.level);
             return deep + dropNode.parent.level <= 3;
         },
         countNodeLevel(node) {
+            // 在查找拖拽节点的子节点的最大level首先做一个赋值
+            this.maxLevel = node.data.catLevel;
             // 找到所有子节点，最大的level
             if (node.childNodes != null && node.childNodes.length > 0) {
                 for (let i = 0; i < node.childNodes.length; i++) {
                     if (node.childNodes[i].level > this.maxLevel) {
-                        this.maxLevel = node.childNodes.level
+                        this.maxLevel = node.childNodes[i].level
                     }
                     this.countNodeLevel(node.childNodes[i])
                 }
@@ -210,7 +220,7 @@ export default {
             // 1.拖拽节点的父节点需要修改
             let parentId = 0;
             // 找到拖拽节点对应的所有兄弟节点
-            siblings = null;
+            let siblings = null;
             if (type == 'inner') {
                 parentId = dropNode.data.catId;
                 // 找到拖拽节点对应的所有的兄弟节点
@@ -226,11 +236,90 @@ export default {
                     // 获取的就是拖拽的那个节点，那么我们需要更新parent_cid
                     // 3.拖拽后的节点及其节点的 catLevel 更新问题
                     let catLevel = draggingNode.level;
-                    if(siblings)
-                    this.updateNodes.push = { catId: siblings[i].data.catId, "sort": i, parentId: parentId }
+                    if (siblings[i].level != catLevel) {
+                        // 拖拽后节点层级发生了变化
+                        catLevel = siblings[i].level;
+                        // 递归的方式来更新子节点的层级
+                        this.updateChildNodeLevel(siblings[i]);
+                    }
+                    this.updateNodes.push({ catId: siblings[i].data.catId, sort: i, parentCid: parentId, catLevel: catLevel });
                 }
-                this.updateNodes.push = { catId: siblings[i].data.catId, "sort": i }
+                this.updateNodes.push({ catId: siblings[i].data.catId, sort: i });
             }
+            // 将拖拽后的数据更新到后端服务中
+            // console.log("updateNodes",this.updateNodes)
+            // this.updateSort(parentId);
+            this.pCids.push(parentId);
+        }, updateSort() {
+            // 批量更新拖拽后的数据 层级+排序
+            this.$http({
+                url: this.$http.adornUrl('/product/category/updateBatch'),
+                method: 'post',
+                data: this.$http.adornData(this.updateNodes, false)
+            }).then(({ data }) => {
+                if (data && data.code === 0) {
+                    this.$message({
+                        message: '数据拖拽成功',
+                        type: 'success',
+                    })
+                    // 重新加载所有的菜单数据
+                    this.getCategory();
+                    // 设置默认展开的父节点信息
+                    this.expandKeys = this.pCids;
+                    // 重置存储拖拽数据的容器
+                    this.updateNodes = []
+                    this.maxLevel = 0
+                    this.parentCid = []
+                } else {
+                    this.$message.error(data.msg)
+                }
+            })
+        },
+        updateChildNodeLevel(node) {
+            if (node.childNodes != null && node.childNodes.length > 0) {
+                for (let i = 0; i < node.childNodes.length; i++) {
+                    var chaildNode = node.chaildNodes[i].data;
+                    this.updateNodes.push({ catId: childNodes.catId, catLevel: node.childNodes[i].level });
+                    // 如果还有子节点，同步的更新处理
+                    this.updateChildNodeLevel(node.childNodes[i]);
+                }
+            }
+        },batchDelete(){
+            // 批量删除的方法
+            let catIds = [];
+            let checkedNodes = this.$refs.tree.getCheckedNodes();
+            for(let i = 0; i < checkedNodes.length; i++){
+                catIds.push(checkedNodes[i].catId)
+            }
+                        this.$confirm(`是否确认删除【${catIds}】分类?`, '提示', {
+                confirmButtonText: '确定',
+                cancelButtonText: '取消',
+                type: 'warning'
+            }).then(() => {
+
+                // 把删除的请求提交到后台服务
+                this.$http({
+                    url: this.$http.adornUrl('/product/category/delete'),
+                    method: 'post',
+                    data: this.$http.adornData(catIds, false)
+                }).then(({ data }) => {
+                    if (data && data.code === 0) {
+                        this.$message({
+                            message: '删除成功',
+                            type: 'success',
+                        })
+                        // 重新加载所有的菜单数据
+                        this.getCategory();
+                    } else {
+                        this.$message.error(data.msg)
+                    }
+                })
+            }).catch(() => {
+                this.$message({
+                    type: 'info',
+                    message: '已取消删除'
+                });
+            });
         },
         remove(node, data) {
             this.$confirm(`是否确认删除【${data.name}】分类?`, '提示', {
