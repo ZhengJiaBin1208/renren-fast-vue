@@ -26,7 +26,7 @@
       <el-table-column prop="showStatus" header-align="center" align="center" label="显示状态">
         <template slot-scope="scope">
           <el-switch style="display: block" v-model="scope.row.showStatus" active-color="#13ce66"
-            inactive-color="#ff4949" active-value="1" inactive-value="0">
+            inactive-color="#ff4949" :active-value="1" :inactive-value="0" 
             @change="updateBrandStatus(scope.row)"
             >
           </el-switch>
