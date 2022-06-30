@@ -20,15 +20,18 @@
       <el-table-column prop="name" header-align="center" align="center" label="品牌名">
       </el-table-column>
       <el-table-column prop="logo" header-align="center" align="center" label="品牌logo地址">
+        <template slot-scope="scope">
+          <!-- <i class="el-icon-time"></i>
+          <span style="margin-left: 10px">{{ scope.row.date }}</span> -->
+          <img v-if="scope.row.logo"  :src="scope.row.logo" width="100px" height="80px" />
+        </template>
       </el-table-column>
       <el-table-column prop="descript" header-align="center" align="center" label="介绍">
       </el-table-column>
       <el-table-column prop="showStatus" header-align="center" align="center" label="显示状态">
         <template slot-scope="scope">
           <el-switch style="display: block" v-model="scope.row.showStatus" active-color="#13ce66"
-            inactive-color="#ff4949" :active-value="1" :inactive-value="0" 
-            @change="updateBrandStatus(scope.row)"
-            >
+            inactive-color="#ff4949" :active-value="1" :inactive-value="0" @change="updateBrandStatus(scope.row)">
           </el-switch>
         </template>
       </el-table-column>
@@ -125,16 +128,16 @@ export default {
       this.$http({
         url: this.$http.adornUrl('/product/brand/update'),
         method: 'post',
-        data: this.$http.adornData({"brandId": data.brandId, "showStatus":data.showStatus}, false)
+        data: this.$http.adornData({ "brandId": data.brandId, "showStatus": data.showStatus }, false)
       }).then(({ data }) => {
-                if (data && data.code === 0) {
-                    this.$message({
-                        message: '状态更新成功',
-                        type: 'success',
-                    })
-                } else {
-                    this.$message.error(data.msg)
-                }
+        if (data && data.code === 0) {
+          this.$message({
+            message: '状态更新成功',
+            type: 'success',
+          })
+        } else {
+          this.$message.error(data.msg)
+        }
       })
     },
     // 删除

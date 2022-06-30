@@ -16,9 +16,7 @@
         <el-input v-model="dataForm.showStatus" placeholder="显示状态"></el-input>
         <template slot-scope="scope">
           <el-switch style="display: block" v-model="dataForm.showStatus" active-color="#13ce66"
-            inactive-color="#ff4949"
-            :active-value="1" :inactive-value="0" 
-            >
+            inactive-color="#ff4949" :active-value="1" :inactive-value="0">
           </el-switch>
         </template>
       </el-form-item>
@@ -40,7 +38,7 @@
 /* eslint-disable */
 import SingleUpload from '@/components/upload/singleUpload';
 export default {
-  components:{SingleUpload},
+  components: { SingleUpload },
   data() {
     return {
       visible: false,
@@ -49,9 +47,9 @@ export default {
         name: '',
         logo: '',
         descript: '',
-        showStatus: '',
+        showStatus: 1,
         firstLetter: '',
-        sort: ''
+        sort: 0
       },
       dataRule: {
         name: [
@@ -67,10 +65,32 @@ export default {
           { required: true, message: '显示状态[0-不显示；1-显示]不能为空', trigger: 'blur' }
         ],
         firstLetter: [
-          { required: true, message: '检索首字母不能为空', trigger: 'blur' }
+          {
+            validator: (rule, value, callback) => {
+              if (value == "") {
+                callback(new Error("检索字母不能为空"))
+              } else if (!/^[a-zA-Z]$/.test(value)) {
+                callback(new Error("检索字母必须是在a~z或者A~Z之间"))
+              } else {
+                callback()
+              }
+            },
+            trigger: 'blur'
+          }
         ],
         sort: [
-          { required: true, message: '排序不能为空', trigger: 'blur' }
+          {          
+            validator: (rule, value, callback) => {
+              if (value == "" && value != 0) {
+                callback(new Error("排序不能为空"))
+              } else if (!Number.isInteger(value) || value < 0) {
+                callback(new Error("排序必须是数字且不能小于0"))
+              } else {
+                callback()
+              }
+            },
+            trigger: 'blur'
+          }
         ]
       }
     }
