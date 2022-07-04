@@ -1,6 +1,8 @@
 <template>
     <div>
-        <el-tree :data="data" :props="defaultProps"  node-key="catId"></el-tree>
+        <el-tree :data="data" :props="defaultProps"  node-key="catId"
+        @node-click = "nodeclick"
+        ></el-tree>
     </div>
 </template>
 
@@ -26,6 +28,10 @@ export default {
                 this.data = data.data
             });
         }, 
+        nodeclick(data,node,component){
+            console.log("分类节点被点击了",data,node,component)
+            this.$emit("show",data.catId)
+        }
     },
     created() {
         this.getCategory();
